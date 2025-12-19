@@ -92,58 +92,59 @@ class VTKWriter:
 
         #### LOAD SPECIFIC DATA ####
         for combo in self.model.load_combos.keys():
-            reaction_constraints = vtk.vtkIntArray()
-            reaction_constraints.SetName("Reaction Constraints")
-            reaction_constraints.SetNumberOfComponents(6)
+            if self.model.solution in ["Linear", "Nonlinear TC"]:
+                reaction_constraints = vtk.vtkIntArray()
+                reaction_constraints.SetName("Reaction Constraints")
+                reaction_constraints.SetNumberOfComponents(6)
 
-            displacements = vtk.vtkDoubleArray()
-            displacements.SetName("Displacements D")
-            displacements.SetNumberOfComponents(3)
+                displacements = vtk.vtkDoubleArray()
+                displacements.SetName("Displacements D")
+                displacements.SetNumberOfComponents(3)
 
-            forces = vtk.vtkDoubleArray()
-            forces.SetName(f"Force Reactions F - {combo}")
-            forces.SetNumberOfComponents(3)
+                forces = vtk.vtkDoubleArray()
+                forces.SetName(f"Force Reactions F - {combo}")
+                forces.SetNumberOfComponents(3)
 
-            moments = vtk.vtkDoubleArray()
-            moments.SetName(f"Moment Reactions M - {combo}")
-            moments.SetNumberOfComponents(3)
+                moments = vtk.vtkDoubleArray()
+                moments.SetName(f"Moment Reactions M - {combo}")
+                moments.SetNumberOfComponents(3)
 
-            force_loads = vtk.vtkDoubleArray()
-            force_loads.SetName(f"Loads F - {combo}")
-            force_loads.SetNumberOfComponents(3)
+                force_loads = vtk.vtkDoubleArray()
+                force_loads.SetName(f"Loads F - {combo}")
+                force_loads.SetNumberOfComponents(3)
 
-            moment_loads = vtk.vtkDoubleArray()
-            moment_loads.SetName(f"Loads M - {combo}")
-            moment_loads.SetNumberOfComponents(3)
+                moment_loads = vtk.vtkDoubleArray()
+                moment_loads.SetName(f"Loads M - {combo}")
+                moment_loads.SetNumberOfComponents(3)
 
-            for i, name in enumerate(["DX", "DY", "DZ", "RX", "RY", "RZ"]):
-                reaction_constraints.SetComponentName(i,name)
+                for i, name in enumerate(["DX", "DY", "DZ", "RX", "RY", "RZ"]):
+                    reaction_constraints.SetComponentName(i,name)
 
-            for node_name, node_id in node_ids.items():
-                node = self.model.nodes[node_name]
-                reaction_constraints.InsertTuple6(node_id, int(node.support_DX), int(node.support_DY), int(node.support_DZ), int(node.support_RX), int(node.support_RY), int(node.support_RZ))
-                displacements.InsertTuple3(node_id, node.DX[combo], node.DY[combo], node.DZ[combo]) # type: ignore
-                forces.InsertTuple3(node_id, node.RxnFX[combo], node.RxnFY[combo], node.RxnFZ[combo])
-                moments.InsertTuple3(node_id, node.RxnMX[combo], node.RxnMY[combo], node.RxnMZ[combo])
+                for node_name, node_id in node_ids.items():
+                    node = self.model.nodes[node_name]
+                    reaction_constraints.InsertTuple6(node_id, int(node.support_DX), int(node.support_DY), int(node.support_DZ), int(node.support_RX), int(node.support_RY), int(node.support_RZ))
+                    displacements.InsertTuple3(node_id, node.DX[combo], node.DY[combo], node.DZ[combo]) # type: ignore
+                    forces.InsertTuple3(node_id, node.RxnFX[combo], node.RxnFY[combo], node.RxnFZ[combo])
+                    moments.InsertTuple3(node_id, node.RxnMX[combo], node.RxnMY[combo], node.RxnMZ[combo])
 
-                # calculate the NodeLoad for each node
-                fl: Dict[str,float] = {"X":0,"Y":0,"Z":0}
-                ml: Dict[str,float] = {"X":0,"Y":0,"Z":0}
-                for (f_or_m, direction), magnitude, case in node.NodeLoads:
-                    if f_or_m == "F":
-                        fl[direction] += magnitude
-                    elif f_or_m == "M":
-                        ml[direction] += magnitude
+                    # calculate the NodeLoad for each node
+                    fl: Dict[str,float] = {"X":0,"Y":0,"Z":0}
+                    ml: Dict[str,float] = {"X":0,"Y":0,"Z":0}
+                    for (f_or_m, direction), magnitude, case in node.NodeLoads:
+                        if f_or_m == "F":
+                            fl[direction] += magnitude
+                        elif f_or_m == "M":
+                            ml[direction] += magnitude
 
-                force_loads.InsertTuple3(node_id, fl["X"], fl["Y"], fl["Z"])
-                moment_loads.InsertTuple3(node_id, ml["X"], ml["Y"], ml["Z"])
+                    force_loads.InsertTuple3(node_id, fl["X"], fl["Y"], fl["Z"])
+                    moment_loads.InsertTuple3(node_id, ml["X"], ml["Y"], ml["Z"])
 
-            ugrid.GetPointData().AddArray(reaction_constraints)
-            ugrid.GetPointData().AddArray(displacements)
-            ugrid.GetPointData().AddArray(forces)
-            ugrid.GetPointData().AddArray(moments)
-            ugrid.GetPointData().AddArray(force_loads)
-            ugrid.GetPointData().AddArray(moment_loads)
+                ugrid.GetPointData().AddArray(reaction_constraints)
+                ugrid.GetPointData().AddArray(displacements)
+                ugrid.GetPointData().AddArray(forces)
+                ugrid.GetPointData().AddArray(moments)
+                ugrid.GetPointData().AddArray(force_loads)
+                ugrid.GetPointData().AddArray(moment_loads)
 
         writer = vtk.vtkUnstructuredGridWriter()
         writer.SetFileName(path)
@@ -204,80 +205,76 @@ class VTKWriter:
         ugrid_members.SetCells(vtk.VTK_LINE, lines)
 
         #### MEMBER Data ####
-        for combo in self.model.load_combos.keys():
-            # Displacement
-            D_array_G = vtk.vtkDoubleArray()
-            D_array_G.SetNumberOfComponents(3)
-            D_array_G.SetName(f"Displacement D - {combo}")
+        # Get Data related to Force - Displacement Analyses
+        if self.model.solution in ["Linear", "Nonlinear TC"]:
+            for combo in self.model.load_combos.keys():
+                # Displacement
+                D_array_G = vtk.vtkDoubleArray()
+                D_array_G.SetNumberOfComponents(3)
+                D_array_G.SetName(f"Displacement D - {combo}")
 
-            D_array_lok = vtk.vtkDoubleArray()
-            D_array_lok.SetNumberOfComponents(3)
-            D_array_lok.SetName(f"Displacement d - {combo}")
+                D_array_lok = vtk.vtkDoubleArray()
+                D_array_lok.SetNumberOfComponents(3)
+                D_array_lok.SetName(f"Displacement d - {combo}")
 
-            # Moments
-            moment_G = vtk.vtkDoubleArray()
-            moment_G.SetNumberOfComponents(3)
-            moment_G.SetName(f"Moments M - {combo}")
+                # Moments
+                moment_G = vtk.vtkDoubleArray()
+                moment_G.SetNumberOfComponents(3)
+                moment_G.SetName(f"Moments M - {combo}")
 
-            moment_lok = vtk.vtkDoubleArray()
-            moment_lok.SetNumberOfComponents(3)
-            moment_lok.SetName(f"Moments m - {combo}")
+                moment_lok = vtk.vtkDoubleArray()
+                moment_lok.SetNumberOfComponents(3)
+                moment_lok.SetName(f"Moments m - {combo}")
 
-            # Forces
-            force_G = vtk.vtkDoubleArray()
-            force_G.SetNumberOfComponents(3)
-            force_G.SetName(f"Forces F - {combo}")
+                # Forces
+                force_G = vtk.vtkDoubleArray()
+                force_G.SetNumberOfComponents(3)
+                force_G.SetName(f"Forces F - {combo}")
 
-            force_lok = vtk.vtkDoubleArray()
-            force_lok.SetNumberOfComponents(3)
-            force_lok.SetName(f"Forces f - {combo}")
+                force_lok = vtk.vtkDoubleArray()
+                force_lok.SetNumberOfComponents(3)
+                force_lok.SetName(f"Forces f - {combo}")
 
-            # Bending Stress increase
-            # Can be used with the Paraview Calculator Filter to get bending stresses at a given location by multiplying with the axial distance
-            sigma_b_G = vtk.vtkDoubleArray()
-            sigma_b_G.SetNumberOfComponents(3)
-            sigma_b_G.SetName(f"Sigma/r - {combo}")
+                # Bending Stress increase
+                # Can be used with the Paraview Calculator Filter to get bending stresses at a given location by multiplying with the axial distance
+                sigma_b_G = vtk.vtkDoubleArray()
+                sigma_b_G.SetNumberOfComponents(3)
+                sigma_b_G.SetName(f"Sigma/r - {combo}")
 
-            sigma_b_lok = vtk.vtkDoubleArray()
-            sigma_b_lok.SetNumberOfComponents(3)
-            sigma_b_lok.SetName(f"sigma/r - {combo}")
+                sigma_b_lok = vtk.vtkDoubleArray()
+                sigma_b_lok.SetNumberOfComponents(3)
+                sigma_b_lok.SetName(f"sigma/r - {combo}")
 
-            for line_range,subm,line in submembers:
-                for i,x in enumerate(line_range):
-                    x = 1-x # go backwards
-                    xl = x * subm.L()
-                    point_id = line.GetPointId(i)
-                    T = inv(subm.T()[:3,:3]) # Transformation Matrix Local -> Global
+                for line_range,subm,line in submembers:
+                    for i,x in enumerate(line_range):
+                        x = 1-x # go backwards
+                        xl = x * subm.L()
+                        point_id = line.GetPointId(i)
+                        T = inv(subm.T()[:3,:3]) # Transformation Matrix Local -> Global
 
-                    # Displacement
-                    deflection = np.array([float(subm.deflection(direction,xl,combo)) for direction in ("dx", "dy", "dz")]) # type: ignore
-                    D_array_lok.InsertTuple3(point_id, *deflection)
-                    D_array_G.InsertTuple3(point_id, *(T @ deflection))
+                        # Displacement
+                        deflection = np.array([float(subm.deflection(direction,xl,combo)) for direction in ("dx", "dy", "dz")]) # type: ignore
+                        D_array_lok.InsertTuple3(point_id, *deflection)
+                        D_array_G.InsertTuple3(point_id, *(T @ deflection))
 
-                    # moment
-                    m = np.array([subm.torque(xl, combo), subm.moment("My",xl,combo), subm.moment("Mz",xl,combo)])
-                    moment_lok.InsertTuple3(point_id, *m)
-                    moment_G.InsertTuple3(point_id, *(T @ m))
+                        # moment
+                        m = np.array([subm.torque(xl, combo), subm.moment("My",xl,combo), subm.moment("Mz",xl,combo)])
+                        moment_lok.InsertTuple3(point_id, *m)
+                        moment_G.InsertTuple3(point_id, *(T @ m))
 
-                    # forces
-                    s = np.array([subm.axial(xl, combo), subm.shear("Fy",xl,combo), subm.shear("Fz",xl,combo)])
-                    force_lok.InsertTuple3(point_id, *s)
-                    force_G.InsertTuple3(point_id, *(T @ s))
+                        # forces
+                        s = np.array([subm.axial(xl, combo), subm.shear("Fy",xl,combo), subm.shear("Fz",xl,combo)])
+                        force_lok.InsertTuple3(point_id, *s)
+                        force_G.InsertTuple3(point_id, *(T @ s))
 
-                    # bending stress increase
-                    sec = subm.section
-                    sig_b = np.array([0, subm.moment("My", xl, combo)/sec.Iy, subm.moment("Mz", xl, combo)/sec.Iz]) # type: ignore
-                    sigma_b_lok.InsertTuple3(point_id, *sig_b)
-                    sigma_b_G.InsertTuple3(point_id, *(T @ sig_b))
+                        # bending stress increase
+                        sec = subm.section
+                        sig_b = np.array([0, subm.moment("My", xl, combo)/sec.Iy, subm.moment("Mz", xl, combo)/sec.Iz]) # type: ignore
+                        sigma_b_lok.InsertTuple3(point_id, *sig_b)
+                        sigma_b_G.InsertTuple3(point_id, *(T @ sig_b))
 
-            ugrid_members.GetPointData().AddArray(D_array_G)
-            ugrid_members.GetPointData().AddArray(D_array_lok)
-            ugrid_members.GetPointData().AddArray(moment_G)
-            ugrid_members.GetPointData().AddArray(moment_lok)
-            ugrid_members.GetPointData().AddArray(force_G)
-            ugrid_members.GetPointData().AddArray(force_lok)
-            ugrid_members.GetPointData().AddArray(sigma_b_G)
-            ugrid_members.GetPointData().AddArray(sigma_b_lok)
+                for arr in [D_array_G, D_array_lok, moment_G, moment_lok, force_G, force_lok, sigma_b_G, sigma_b_lok]:
+                    ugrid_members.GetPointData().AddArray(arr)
 
         # clean the data from duplicate points
         cleaner = vtk.vtkStaticCleanUnstructuredGrid()
