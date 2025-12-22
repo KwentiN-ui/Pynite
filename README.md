@@ -6,6 +6,7 @@
 
 ![Build Status](https://github.com/JWock82/Pynite/actions/workflows/build-and-test.yml/badge.svg)
 [![codecov](https://codecov.io/gh/JWock82/Pynite/branch/main/graph/badge.svg?token=ZH18US3A7P)](https://codecov.io/gh/JWock82/Pynite)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/PyniteFEA)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/PyNiteFEA?cacheSeconds=86400)
 <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/JWock82/Pynite">
 ![GitHub last commit](https://img.shields.io/github/last-commit/JWock82/Pynite)
@@ -67,6 +68,22 @@ Here's a list of projects that use Pynite:
 * Phaenotyp (https://github.com/bewegende-Architektur/Phaenotyp) (https://youtu.be/shloSw9HjVI)
 
 # What's New?
+v2.0.4 (in development)
+* Added load case/combo identification to VTK rendering.
+* Dropped support for Python version 3.10, which is not compatible with Numpy 2.4.
+* Removed unecessary checks for Scipy. Scipy has been a required dependency for some time now.
+* Cleaned up whitespace to conform to PEP8 style guide.
+
+v2.0.3
+* Numpy >= 2.4 is now a requirement. This ensures the VTK renderer will handle plate results arrays properly.
+* `pip` now installs dependencies during build testing. Pynite's testing suite now runs against the correct version of each dependency.
+
+v2.0.2
+* Added docstrings to the VTK `Renderer` class to help the user.
+* Enforced use of properties instead of attributes in the VTK `Renderer` and added docstrings to properties help the user make decisions.
+* Removed the VTK `Renderer`'s properties that began with "set_". These were redundant and caused confusion. The prefix "set_" is no longer used to access or set any of the `Renderer`'s properties.
+* Made the VTK `Renderer` compatible with the latest version of `numpy`.
+
 v2.0.1
 * Pynite no longer struggles rendering load cases and combinations when no loads are present. This is especially helpful for rendering modal load combinations, which don't have loads (only masses).
 * The pyvista plotter's "X" button now works just like pressing "q". This was an annoying pyvista-ism that led to error messages when closing the window with the "X" button.
